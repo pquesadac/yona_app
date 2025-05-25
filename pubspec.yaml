@@ -1,0 +1,37 @@
+name: yona_app
+description: Aplicación de chat enfocado en la salud/deporte/dieta con IA.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  shared_preferences: ^2.2.0 #almacenamiento de mensajes
+  cupertino_icons: ^1.0.5
+  flutter_web_plugins:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.1
+
+flutter:
+  uses-material-design: true
+  
+  # Para incluir el logo en la aplicación
+  assets:
+    - assets/images/
+    
+  # Añade fuentes personalizadas si las necesitas
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
