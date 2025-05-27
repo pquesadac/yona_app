@@ -3,38 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:io'; 
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'text': text,
-      'isUser': isUser,
-      'timestamp': timestamp.toIso8601String(),
-    };
-  }
-
-  factory ChatMessage.fromMap(Map<String, dynamic> map) {
-    return ChatMessage(
-      text: map['text'],
-      isUser: map['isUser'],
-      timestamp: DateTime.parse(map['timestamp']),
-    );
-  }
-}
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/chat_service.dart';
 
 class ChatPage extends StatefulWidget {
-  const ChatPage({Key? key}) : super(key: key);
+  final String? conversationId;
+  
+  const ChatPage({Key? key, this.conversationId}) : super(key: key);
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -43,73 +18,66 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ChatService _chatService = ChatService();
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
-
+  String? _currentConversationId;
+  
   // URLs para diferentes plataformas
   String get _lmStudioUrl {
     if (kIsWeb) {
-      // Para web, usa localhost
       return 'http://127.0.0.1:1234/v1/chat/completions';
     } else if (Platform.isAndroid) {
-      // Para emulador Android, usa la IP especial del emulador
-      // 10.0.2.2 es la IP que el emulador Android usa para acceder al host
       return 'http://10.0.2.2:1234/v1/chat/completions';
     } else if (Platform.isIOS) {
-      // Para simulador iOS, usa localhost
       return 'http://127.0.0.1:1234/v1/chat/completions';
     } else {
-      // Para otras plataformas (Windows, macOS, Linux)
       return 'http://127.0.0.1:1234/v1/chat/completions';
     }
   }
-  
-  static const String _storageKey = 'fitnessChatMessages';
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
-    _debugPrintUrl(); // Para debugging
+    _initializeChat();
+    _debugPrintUrl();
   }
 
-  // Método para debugging - mostrar qué URL se está usando
-  void _debugPrintUrl() {
-    print('Platform: ${kIsWeb ? 'Web' : Platform.operatingSystem}');
-    print('Using URL: $_lmStudioUrl');
-  }
-
-  Future<void> _saveMessages() async {
-    final prefs = await SharedPreferences.getInstance();
-    final messagesJson = _messages.map((msg) => msg.toMap()).toList();
-    await prefs.setString(_storageKey, jsonEncode(messagesJson));
-  }
-
-  Future<void> _loadMessages() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final messagesJson = prefs.getString(_storageKey);
-      
-      if (messagesJson != null) {
-        final List<dynamic> decoded = jsonDecode(messagesJson);
-        setState(() {
-          _messages.clear();
-          _messages.addAll(
-            decoded.map((msgMap) => ChatMessage.fromMap(Map<String, dynamic>.from(msgMap))).toList(),
-          );
-        });
+  Future<void> _initializeChat() async {
+    if (widget.conversationId != null) {
+      _currentConversationId = widget.conversationId;
+      _loadConversationMessages();
+    } else {
+      final latestId = await _chatService.getLatestConversationId();
+      if (latestId != null) {
+        _currentConversationId = latestId;
+        _loadConversationMessages();
       }
-    } catch (e) {
-      print('Error al cargar mensajes: $e');
     }
   }
 
-  Future<void> _clearMessages() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey);
-    setState(() {
-      _messages.clear();
-    });
+  void _loadConversationMessages() {
+    if (_currentConversationId == null) return;
+
+    _chatService.getConversationMessages(_currentConversationId!).listen(
+      (messages) {
+        if (mounted) {
+          setState(() {
+            _messages.clear();
+            _messages.addAll(messages);
+          });
+          _scrollToBottom();
+        }
+      },
+      onError: (error) {
+        print('❌ CHAT: Error al cargar mensajes: $error');
+      },
+    );
+  }
+
+  void _debugPrintUrl() {
+    print('Platform: ${kIsWeb ? 'Web' : Platform.operatingSystem}');
+    print('Using URL: $_lmStudioUrl');
   }
 
   @override
@@ -135,20 +103,37 @@ class _ChatPageState extends State<ChatPage> {
     final userMessage = _messageController.text.trim();
     if (userMessage.isEmpty) return;
 
-    setState(() {
-      _messages.add(ChatMessage(
+    if (FirebaseAuth.instance.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes iniciar sesión para usar el chat'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      if (_currentConversationId == null) {
+        _currentConversationId = await _chatService.createNewConversation(userMessage);
+        _loadConversationMessages();
+      }
+
+      final userMessageObj = ChatMessage(
         text: userMessage,
         isUser: true,
         timestamp: DateTime.now(),
-      ));
-      _isLoading = true;
-      _messageController.clear();
-    });
-    
-    await _saveMessages();
-    _scrollToBottom();
+      );
 
-    try {
+      await _chatService.saveMessage(_currentConversationId!, userMessageObj);
+
+      setState(() {
+        _isLoading = true;
+        _messageController.clear();
+      });
+
+      _scrollToBottom();
+
       final response = await http.post(
         Uri.parse(_lmStudioUrl),
         headers: {
@@ -191,36 +176,51 @@ class _ChatPageState extends State<ChatPage> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         var aiResponse = data['choices'][0]['message']['content'] as String;
-        
         aiResponse = _cleanResponse(aiResponse);
         
+        final aiMessageObj = ChatMessage(
+          text: aiResponse,
+          isUser: false,
+          timestamp: DateTime.now(),
+        );
+
+        await _chatService.saveMessage(_currentConversationId!, aiMessageObj);
+
         setState(() {
-          _messages.add(ChatMessage(
-            text: aiResponse,
-            isUser: false,
-            timestamp: DateTime.now(),
-          ));
           _isLoading = false;
         });
-        
-        _saveMessages();
       } else {
+        final errorMessage = 'Error al conectar con LM Studio: ${response.statusCode}\n\nVerifica que el servidor esté ejecutándose.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl';
+        
+        final errorMessageObj = ChatMessage(
+          text: errorMessage,
+          isUser: false,
+          timestamp: DateTime.now(),
+        );
+
+        await _chatService.saveMessage(_currentConversationId!, errorMessageObj);
+        
         setState(() {
-          _messages.add(ChatMessage(
-            text: 'Error al conectar con LM Studio: ${response.statusCode}\n\nVerifica que el servidor esté ejecutándose.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl',
-            isUser: false,
-            timestamp: DateTime.now(),
-          ));
           _isLoading = false;
         });
       }
     } catch (e) {
+      final errorMessage = 'Error de conexión con LM Studio: $e\n\nVerifica tu conexión y que el servidor esté activo.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl\n\nSi usas Android emulador, asegúrate de que LM Studio esté configurado para aceptar conexiones desde 10.0.2.2';
+      
+      try {
+        if (_currentConversationId != null) {
+          final errorMessageObj = ChatMessage(
+            text: errorMessage,
+            isUser: false,
+            timestamp: DateTime.now(),
+          );
+          await _chatService.saveMessage(_currentConversationId!, errorMessageObj);
+        }
+      } catch (saveError) {
+        print('❌ Error al guardar mensaje de error: $saveError');
+      }
+
       setState(() {
-        _messages.add(ChatMessage(
-          text: 'Error de conexión con LM Studio: $e\n\nVerifica tu conexión y que el servidor esté activo.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl\n\nSi usas Android emulador, asegúrate de que LM Studio esté configurado para aceptar conexiones desde 10.0.2.2',
-          isUser: false,
-          timestamp: DateTime.now(),
-        ));
         _isLoading = false;
       });
     }
@@ -237,6 +237,13 @@ class _ChatPageState extends State<ChatPage> {
     return response.trim();
   }
 
+  Future<void> _startNewConversation() async {
+    setState(() {
+      _currentConversationId = null;
+      _messages.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -250,7 +257,6 @@ class _ChatPageState extends State<ChatPage> {
               style: TextStyle(color: Colors.white),
             ),
             const SizedBox(width: 8),
-            // Indicador de plataforma para debugging
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -270,36 +276,46 @@ class _ChatPageState extends State<ChatPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    backgroundColor: const Color(0xFF212836),
-                    title: const Text('Confirmar', style: TextStyle(color: Colors.white)),
-                    content: const Text('¿Deseas limpiar la conversación actual?', 
-                      style: TextStyle(color: Colors.white70)),
-                    actions: [
-                      TextButton(
-                        child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      TextButton(
-                        child: const Text('Aceptar', style: TextStyle(color: Color(0xFF4CAF50))),
-                        onPressed: () {
-                          _clearMessages(); 
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
+            icon: const Icon(Icons.add_comment, color: Colors.white),
+            onPressed: _startNewConversation,
+            tooltip: 'Nueva conversación',
           ),
+          if (_currentConversationId != null)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      backgroundColor: const Color(0xFF212836),
+                      title: const Text('Confirmar', style: TextStyle(color: Colors.white)),
+                      content: const Text('¿Deseas eliminar esta conversación?', 
+                        style: TextStyle(color: Colors.white70)),
+                      actions: [
+                        TextButton(
+                          child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        TextButton(
+                          child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+                          onPressed: () async {
+                            if (_currentConversationId != null) {
+                              await _chatService.deleteConversation(_currentConversationId!);
+                              _startNewConversation();
+                            }
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+              tooltip: 'Eliminar conversación',
+            ),
         ],
       ),
       body: Column(

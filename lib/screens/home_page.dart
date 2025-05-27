@@ -30,7 +30,6 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color.fromARGB(255, 20, 24, 27),
       body: Row(
         children: [
-          // Barra lateral para desktop/web
           if (!_isMobile) ...[
             _buildNavigationRail(),
             Container(
@@ -39,36 +38,29 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
           
-          // Contenido principal
           Expanded(
             child: Stack(
               children: [
-                // Contenido de las páginas
                 _pages[_selectedIndex],
                 
-                // Botón flotante para móvil
                 if (_isMobile)
                   Positioned(
-                    top: 8, // Posición más arriba y consistente
+                    top: MediaQuery.of(context).padding.top + kToolbarHeight + 8, 
                     left: _selectedIndex == 2 ? null : 16,
                     right: _selectedIndex == 2 ? 16 : null,
-                    child: SafeArea(
-                      child: FloatingActionButton.small(
-                        backgroundColor: const Color(0xFF212836),
-                        foregroundColor: Colors.white,
-                        onPressed: () {
-                          setState(() {
-                            _isDrawerOpen = !_isDrawerOpen;
-                          });
-                        },
-                        child: Icon(_isDrawerOpen ? Icons.close : Icons.menu),
-                      ),
+                    child: FloatingActionButton.small(
+                      backgroundColor: const Color(0xFF212836),
+                      foregroundColor: Colors.white,
+                      onPressed: () {
+                        setState(() {
+                          _isDrawerOpen = !_isDrawerOpen;
+                        });
+                      },
+                      child: Icon(_isDrawerOpen ? Icons.close : Icons.menu),
                     ),
                   ),
                 
-                // Drawer móvil con overlay
                 if (_isMobile && _isDrawerOpen) ...[
-                  // Overlay para cerrar drawer
                   Positioned.fill(
                     child: GestureDetector(
                       onTap: () {
@@ -81,7 +73,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  // Drawer lateral
                   Positioned(
                     left: 0,
                     top: 0,
@@ -189,7 +180,6 @@ class _HomePageState extends State<HomePage> {
       child: SafeArea(
         child: Column(
           children: [
-            // Header del drawer
             Container(
               padding: const EdgeInsets.all(20),
               width: double.infinity,

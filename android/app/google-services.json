@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "117125632502",
+    "project_id": "yona-proyecto",
+    "storage_bucket": "yona-proyecto.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:117125632502:android:917cabc6a4a1ab90c477d7",
+        "android_client_info": {
+          "package_name": "com.example.yona_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdPdsTJVDIabcdA7GQyFd5kTiAHOVePUU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

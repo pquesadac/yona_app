@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -11,13 +13,101 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: const Color(0xFF1A5D3A),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      print('Iniciando login...');
+      
+      final result = await _authService.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      print('Resultado: ${result?.user?.uid}');
+
+      if (result != null && result.user != null) {
+        _showSuccessSnackBar('¡Bienvenido de nuevo!');
+        print('Exitoso - Navegando a home...');
+        
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/home',
+            (Route<dynamic> route) => false, 
+          );
+        }
+      } else {
+        print('result o result.user es null');
+        _showErrorSnackBar('Error: No se pudo completar el login');
+      }
+    } catch (e) {
+      print('Error: $e');
+      _showErrorSnackBar(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    
+    if (email.isEmpty) {
+      _showErrorSnackBar('Por favor ingresa tu email para recuperar la contraseña');
+      return;
+    }
+
+    try {
+      await _authService.resetPassword(email);
+      _showSuccessSnackBar('Se ha enviado un email para restablecer tu contraseña');
+    } catch (e) {
+      _showErrorSnackBar(e.toString());
+    }
   }
 
   @override
@@ -35,10 +125,10 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   const SizedBox(height: 80),
                   Image.asset(
-                  'assets/images/yonalogo.png', 
-                  height: 180,
-                  width: 180,
-                ),
+                    'assets/images/yonalogo.png', 
+                    height: 180,
+                    width: 180,
+                  ),
                   const SizedBox(height: 40),
                   const Text(
                     '¡Bienvenido de vuelta!',
@@ -53,8 +143,10 @@ class _LoginPageState extends State<LoginPage> {
                   
                   TextFormField(
                     controller: _emailController,
+                    enabled: !_isLoading,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      hintText: 'Email o Usuario',
+                      hintText: 'Email',
                       hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
                       fillColor: const Color(0xFF212836),
@@ -67,7 +159,10 @@ class _LoginPageState extends State<LoginPage> {
                     style: const TextStyle(color: Colors.white),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor ingresa tu email o usuario';
+                        return 'Por favor ingresa tu email';
+                      }
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        return 'Por favor ingresa un email válido';
                       }
                       return null;
                     },
@@ -76,6 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                   
                   TextFormField(
                     controller: _passwordController,
+                    enabled: !_isLoading,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       hintText: 'Contraseña',
@@ -111,9 +207,7 @@ class _LoginPageState extends State<LoginPage> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        // Falta implementar recuperación de contraseña
-                      },
+                      onPressed: _isLoading ? null : _resetPassword,
                       child: const Text(
                         '¿Olvidaste tu contraseña?',
                         style: TextStyle(
@@ -130,39 +224,27 @@ class _LoginPageState extends State<LoginPage> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          // Falta implementar un inicio de sesión linkeado con una base de datos
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Iniciando sesión...'),
-                              backgroundColor: Color(0xFF1A5D3A),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                          
-                          Future.delayed(const Duration(seconds: 1), () {
-                            Navigator.pushReplacementNamed(context, '/home');
-                          });
-                        }
-                      },
+                      onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1A5D3A),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text(
-                        'Iniciar Sesión',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            )
+                          : const Text(
+                              'Iniciar Sesión',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                     ),
                   ),
-                  
                   
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
@@ -185,37 +267,37 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   
-                  // Botones de redes sociales (Falta ajustar iconos para que sean mas realistas )
-                Row(
+                  // Botones de redes sociales
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Botón de Google
                       _socialButton(
                         onTap: () {
+                          // Implementar Google Sign In
                         },
                         icon: Icons.g_mobiledata,
                       ),
                       const SizedBox(width: 16),
                       
-                      // Botón de Apple
                       _socialButton(
                         onTap: () {
+                          // Implementar Apple Sign In
                         },
                         icon: Icons.apple,
                       ),
                       const SizedBox(width: 16),
                       
-                      // Botón de GitHub
                       _socialButton(
                         onTap: () {
+                          // Implementar GitHub Sign In
                         },
                         icon: Icons.code,
                       ),
                       const SizedBox(width: 16),
                       
-                      // Botón de LinkedIn
                       _socialButton(
                         onTap: () {
+                          // Implementar LinkedIn Sign In
                         },
                         icon: Icons.link,
                       ),
@@ -254,6 +336,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
   Widget _socialButton({required VoidCallback onTap, required IconData icon}) {
     return InkWell(
       onTap: onTap,

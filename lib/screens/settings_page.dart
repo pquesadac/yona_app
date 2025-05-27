@@ -232,6 +232,54 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  // Función para mostrar diálogo de confirmación de cerrar sesión
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF212836),
+          title: const Text(
+            'Cerrar sesión',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            '¿Estás seguro de que quieres cerrar sesión?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+              },
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Cerrar el diálogo
+                _logout(); // Ejecutar el logout
+              },
+              child: const Text(
+                'Cerrar sesión',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _logout() {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/welcome',
+      (Route<dynamic> route) => false,
+    );
+  }
+
   Widget _buildProfileContent() {
     return SingleChildScrollView(
       padding: EdgeInsets.all(_isMobile ? 16.0 : 32.0),
@@ -352,6 +400,40 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
+          
+          const SizedBox(height: 40),
+          const Divider(
+            color: Colors.white24,
+            thickness: 1,
+          ),
+          const SizedBox(height: 24),
+          
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _showLogoutDialog,
+              icon: const Icon(
+                Icons.logout,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'Cerrar sesión',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -403,10 +485,8 @@ class _SettingsPageState extends State<SettingsPage> {
         return Icons.lock_outline;
       case 'Facturación':
         return Icons.payment_outlined;
-      case 'Configuracion IA':
-        return Icons.code_outlined;
       default:
         return Icons.settings;
     }
   }
-}
+}     

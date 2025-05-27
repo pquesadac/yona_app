@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -13,8 +14,11 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -23,6 +27,73 @@ class _RegisterPageState extends State<RegisterPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  void _showSuccessSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: const Color(0xFF1A5D3A),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      print('Iniciando proceso de registro...');
+      
+      final result = await _authService.registerWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        username: _usernameController.text.trim(),
+      );
+
+      print('Resultado del registro: ${result?.user?.uid}');
+
+      if (result != null && result.user != null) {
+        _showSuccessSnackBar('¡Cuenta creada exitosamente!');
+        print('Registro exitoso - Navegando a home...');
+        
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/home',
+            (Route<dynamic> route) => false, 
+          );
+        }
+      }
+    } catch (e) {
+      print('Error durante el registro: $e');
+      _showErrorSnackBar(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -58,6 +129,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   
                   TextFormField(
                     controller: _usernameController,
+                    enabled: !_isLoading,
                     decoration: InputDecoration(
                       hintText: 'Usuario',
                       hintStyle: const TextStyle(color: Colors.white54),
@@ -71,8 +143,17 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     style: const TextStyle(color: Colors.white),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return 'Por favor ingresa un nombre de usuario';
+                      }
+                      if (value.trim().length < 3) {
+                        return 'El usuario debe tener al menos 3 caracteres';
+                      }
+                      if (value.trim().length > 20) {
+                        return 'El usuario no puede tener más de 20 caracteres';
+                      }
+                      if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value.trim())) {
+                        return 'Solo se permiten letras, números y guiones bajos';
                       }
                       return null;
                     },
@@ -81,6 +162,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   
                   TextFormField(
                     controller: _emailController,
+                    enabled: !_isLoading,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       hintText: 'Email',
@@ -95,10 +177,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     style: const TextStyle(color: Colors.white),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      if (value == null || value.trim().isEmpty) {
                         return 'Por favor ingresa un email';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
                         return 'Por favor ingresa un email válido';
                       }
                       return null;
@@ -108,6 +190,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   
                   TextFormField(
                     controller: _passwordController,
+                    enabled: !_isLoading,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       hintText: 'Contraseña',
@@ -139,6 +222,12 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (value.length < 6) {
                         return 'La contraseña debe tener al menos 6 caracteres';
                       }
+                      if (value.length > 50) {
+                        return 'La contraseña no puede tener más de 50 caracteres';
+                      }
+                      if (!RegExp(r'^(?=.*[a-zA-Z])(?=.*\d)').hasMatch(value)) {
+                        return 'La contraseña debe contener al menos una letra y un número';
+                      }
                       return null;
                     },
                   ),
@@ -146,6 +235,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   
                   TextFormField(
                     controller: _confirmPasswordController,
+                    enabled: !_isLoading,
                     obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
                       hintText: 'Confirmar contraseña',
@@ -186,34 +276,25 @@ class _RegisterPageState extends State<RegisterPage> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Procesando registro...'),
-                              backgroundColor: Color(0xFF1A5D3A),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                          Future.delayed(const Duration(seconds: 1), () {
-                            Navigator.pushReplacementNamed(context, '/home');
-                          });
-                        }
-                      },
+                      onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1A5D3A),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text(
-                        'Registrarse',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            )
+                          : const Text(
+                              'Registrarse',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                     ),
                   ),
                   
@@ -245,6 +326,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       // Botón de Google
                       _socialButton(
                         onTap: () {
+                          _showErrorSnackBar('Funcionalidad no disponible aún');
                         },
                         icon: Icons.g_mobiledata,
                       ),
@@ -253,6 +335,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       // Botón de Apple
                       _socialButton(
                         onTap: () {
+                          _showErrorSnackBar('Funcionalidad no disponible aún');
                         },
                         icon: Icons.apple,
                       ),
@@ -261,6 +344,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       // Botón de GitHub
                       _socialButton(
                         onTap: () {
+                          _showErrorSnackBar('Funcionalidad no disponible aún');
                         },
                         icon: Icons.code,
                       ),
@@ -269,6 +353,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       // Botón de LinkedIn
                       _socialButton(
                         onTap: () {
+                          _showErrorSnackBar('Funcionalidad no disponible aún');
                         },
                         icon: Icons.link,
                       ),
@@ -285,7 +370,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: TextStyle(color: Colors.white70),
                       ),
                       GestureDetector(
-                        onTap: () {
+                        onTap: _isLoading ? null : () {
                           Navigator.pushReplacementNamed(context, '/login');
                         },
                         child: const Text(
@@ -310,18 +395,18 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Widget _socialButton({required VoidCallback onTap, required IconData icon}) {
     return InkWell(
-      onTap: onTap,
+      onTap: _isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(30),
       child: Container(
         width: 50,
         height: 50,
-        decoration: const BoxDecoration(
-          color: Color(0xFF212836),
+        decoration: BoxDecoration(
+          color: _isLoading ? Colors.grey.withOpacity(0.3) : const Color(0xFF212836),
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
-          color: Colors.white,
+          color: _isLoading ? Colors.grey : Colors.white,
           size: 30,
         ),
       ),
