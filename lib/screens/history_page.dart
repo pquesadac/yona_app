@@ -215,10 +215,13 @@ class _HistoryPageState extends State<HistoryPage> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            },
+              Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ChatPage(), 
+              ),
+            );
+          },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4CAF50),
               foregroundColor: Colors.white,
@@ -226,9 +229,6 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             icon: const Icon(Icons.chat),
             label: const Text('Ir al Chat'),
-
-
-
           ),
         ],
       ),

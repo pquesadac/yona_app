@@ -16,7 +16,11 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isDarkMode = true; 
   final AuthService _authService = AuthService();
   final _emailController = TextEditingController();
-
+  
+  final _usernameController = TextEditingController();
+  String _userEmail = '';
+  bool _isLoadingProfile = true;
+  bool _isSavingProfile = false;
 
   bool get _isMobile => !kIsWeb && MediaQuery.of(context).size.width < 600;
 
@@ -24,6 +28,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _loadTheme();
+    _loadUserProfile();
     
     ThemeService.addListener(_onThemeChanged);
   }
@@ -31,6 +36,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void dispose() {
     _emailController.dispose();
+    _usernameController.dispose();
     ThemeService.removeListener(_onThemeChanged);
     super.dispose();
   }
@@ -48,6 +54,67 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _loadUserProfile() async {
+    try {
+      final user = _authService.currentUser;
+      if (user != null) {
+        final userData = await _authService.getUserData(user.uid);
+        if (mounted) {
+          setState(() {
+            _usernameController.text = userData?['username'] ?? user.displayName ?? 'Usuario';
+            _userEmail = user.email ?? '';
+            _isLoadingProfile = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+        _showErrorSnackBar('Error al cargar datos del perfil');
+      }
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    final newUsername = _usernameController.text.trim();
+    
+    if (newUsername.isEmpty) {
+      _showErrorSnackBar('El nombre de usuario no puede estar vacío');
+      return;
+    }
+
+    setState(() {
+      _isSavingProfile = true;
+    });
+
+    try {
+      final user = _authService.currentUser;
+      if (user != null) {
+        await user.updateDisplayName(newUsername);
+        
+        await _authService.updateUserProfile(user.uid, {
+          'username': newUsername,
+        });
+
+        if (mounted) {
+          _showSuccessSnackBar('Perfil actualizado correctamente');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar('Error al actualizar el perfil: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingProfile = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,7 +128,6 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildMobileLayout() {
     return Column(
       children: [
-
         Container(
           padding:
               const EdgeInsets.only(top: 40, left: 16, right: 16, bottom: 16),
@@ -101,16 +167,12 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
 
-
         Expanded(
           child: Stack(
             children: [
-
               _getSettingsContent(),
 
-
               if (_isMobileMenuOpen) ...[
-
                 Positioned.fill(
                   child: GestureDetector(
                     onTap: () {
@@ -304,15 +366,10 @@ class _SettingsPageState extends State<SettingsPage> {
         return _buildAppearanceContent();
       case 'Cambiar Contraseña':
         return _buildPasswordChangeContent();
-
-
-
-
       default:
         return _buildProfileContent();
     }
   }
-
 
   void _showLogoutDialog() {
     showDialog(
@@ -379,6 +436,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildProfileContent() {
+    if (_isLoadingProfile) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: const Color(0xFF4CAF50),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(_isMobile ? 16.0 : 32.0),
       child: Column(
@@ -386,40 +451,34 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           const SizedBox(height: 16),
           Text(
-
-            'Nombre completo',
+            'Información del Perfil',
+            style: TextStyle(
+              color: _isDarkMode ? Colors.white : Colors.black87,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Gestiona la información de tu cuenta',
             style: TextStyle(
               color: _isDarkMode ? Colors.white70 : Colors.black54,
               fontSize: 14,
             ),
           ),
-          const SizedBox(height: 8),
-          TextFormField(
-            initialValue: 'Pablo Quesada',
-            decoration: InputDecoration(
-              filled: true,
-              fillColor:
-                  _isDarkMode ? const Color(0xFF212836) : Colors.grey.shade100,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            style:
-                TextStyle(color: _isDarkMode ? Colors.white : Colors.black87),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
+          
           Text(
-
             'Nombre de usuario',
             style: TextStyle(
               color: _isDarkMode ? Colors.white70 : Colors.black54,
               fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
           TextFormField(
-            initialValue: 'Pablo',
+            controller: _usernameController,
             decoration: InputDecoration(
               filled: true,
               fillColor:
@@ -428,80 +487,107 @@ class _SettingsPageState extends State<SettingsPage> {
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,
               ),
+              contentPadding: const EdgeInsets.all(16),
+              hintText: 'Ingresa tu nombre de usuario',
+              hintStyle: TextStyle(
+                color: _isDarkMode ? Colors.white54 : Colors.black38,
+              ),
             ),
             style:
                 TextStyle(color: _isDarkMode ? Colors.white : Colors.black87),
           ),
           const SizedBox(height: 24),
+          
           Text(
-
-            '¿Qué descripción se ajusta mejor a su trabajo?',
+            'Correo electrónico',
             style: TextStyle(
               color: _isDarkMode ? Colors.white70 : Colors.black54,
               fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
           Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color:
-                  _isDarkMode ? const Color(0xFF212836) : Colors.grey.shade100,
+              color: _isDarkMode 
+                  ? const Color(0xFF212836).withOpacity(0.6)
+                  : Colors.grey.shade200,
               borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: _isDarkMode ? Colors.white24 : Colors.grey.shade300,
+              ),
             ),
-            child: DropdownButtonFormField<String>(
-              value: null,
-              hint: Text(
-                'Seleccione su puesto de trabajo',
-                style: TextStyle(
-                    color: _isDarkMode ? Colors.white70 : Colors.black54),
-              ),
-              dropdownColor:
-                  _isDarkMode ? const Color(0xFF212836) : Colors.white,
-              style:
-                  TextStyle(color: _isDarkMode ? Colors.white : Colors.black87),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16),
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: 'estudiante',
-                  child: Text('Estudiante'),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.email_outlined,
+                  color: _isDarkMode ? Colors.white54 : Colors.black45,
+                  size: 20,
                 ),
-                DropdownMenuItem(
-                  value: 'empleado',
-                  child: Text('Empleado'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _userEmail.isNotEmpty ? _userEmail : 'No disponible',
+                    style: TextStyle(
+                      color: _isDarkMode ? Colors.white70 : Colors.black54,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
-                DropdownMenuItem(
-                  value: 'emprendedor',
-                  child: Text('Emprendedor'),
-                ),
-                DropdownMenuItem(
-                  value: 'freelancer',
-                  child: Text('Freelancer'),
-                ),
-                DropdownMenuItem(
-                  value: 'jubilado',
-                  child: Text('Jubilado'),
-                ),
-                DropdownMenuItem(
-                  value: 'otro',
-                  child: Text('Otro'),
+                Icon(
+                  Icons.lock_outline,
+                  color: _isDarkMode ? Colors.white54 : Colors.black45,
+                  size: 16,
                 ),
               ],
-              onChanged: (value) {},
             ),
           ),
-
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {},
-              child: const Text(
-                'Más información sobre las preferencias',
-                style: TextStyle(
-                  color: Color(0xFF4CAF50),
+          const SizedBox(height: 8),
+          Text(
+            'El correo electrónico no se puede modificar',
+            style: TextStyle(
+              color: _isDarkMode ? Colors.white54 : Colors.black45,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Botón para guardar cambios
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: _isSavingProfile ? null : _saveProfile,
+              icon: _isSavingProfile 
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.save_outlined,
+                      color: Colors.white,
+                    ),
+              label: Text(
+                _isSavingProfile ? 'Guardando...' : 'Guardar Cambios',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isSavingProfile 
+                    ? const Color(0xFF4CAF50).withOpacity(0.7)
+                    : const Color(0xFF4CAF50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
             ),
@@ -573,7 +659,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     setState(() {
                       _isDarkMode = value;
                     });
-                    // Guardar y notificar el cambio de tema
                     await ThemeService.setTheme(value);
                   },
                   activeColor: const Color(0xFF4CAF50),
@@ -783,12 +868,6 @@ class _SettingsPageState extends State<SettingsPage> {
           content: Text(message),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
-
-
-
-
-
-
         ),
       );
     }
@@ -803,9 +882,6 @@ class _SettingsPageState extends State<SettingsPage> {
           duration: const Duration(seconds: 2),
         ),
       );
-
-
-
     }
   }
 }

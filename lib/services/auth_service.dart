@@ -253,6 +253,29 @@ class AuthService {
     }
   }
 
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+  try {
+    print('Actualizando perfil para $uid');
+    
+    await _firestore.collection('users').doc(uid).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }).timeout(const Duration(seconds: 15));
+    
+    print('Perfil actualizado exitosamente');
+  } catch (e) {
+    print('Error al actualizar perfil: $e');
+    
+    if (e.toString().contains('permission-denied')) {
+      throw 'Error.';
+    } else if (e.toString().contains('timeout')) {
+      throw 'Timeout al actualizar datos. Verifica tu conexión.';
+    } else {
+      throw 'Error: ${e.toString()}';
+    }
+  }
+}
+
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'weak-password':

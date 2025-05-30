@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; 
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
-import 'dart:io'; 
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/chat_service.dart';
@@ -25,7 +25,6 @@ class _ChatPageState extends State<ChatPage> {
   String? _currentConversationId;
   bool _isDarkMode = true;
 
-
   String get _lmStudioUrl {
     if (kIsWeb) {
       return 'http://127.0.0.1:1234/v1/chat/completions';
@@ -44,7 +43,7 @@ class _ChatPageState extends State<ChatPage> {
     _loadTheme();
     _initializeChat();
     _debugPrintUrl();
-    
+
     ThemeService.addListener(_onThemeChanged);
   }
 
@@ -106,13 +105,6 @@ class _ChatPageState extends State<ChatPage> {
     print('Using URL: $_lmStudioUrl');
   }
 
-
-
-
-
-
-
-
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -141,7 +133,8 @@ class _ChatPageState extends State<ChatPage> {
 
     try {
       if (_currentConversationId == null) {
-        _currentConversationId = await _chatService.createNewConversation(userMessage);
+        _currentConversationId =
+            await _chatService.createNewConversation(userMessage);
         _loadConversationMessages();
       }
 
@@ -172,8 +165,9 @@ class _ChatPageState extends State<ChatPage> {
           'model': 'hermes-3-llama-3.2-3b',
           'messages': [
             {
-              'role': 'system', 
-              'content': '''Eres un asistente virtual especializado en salud, nutrición y fitness que responde de manera clara, concisa y siempre en español.
+              'role': 'system',
+              'content':
+                  '''Eres un asistente virtual especializado en salud, nutrición y fitness que responde de manera clara, concisa y siempre en español.
               Proporciona información precisa y fácil de entender sobre ejercicios, rutinas deportivas, nutrición y hábitos saludables.
               IMPORTANTE: NO USES ETIQUETAS <think> NI MUESTRES TU PROCESO DE PENSAMIENTO.
               Estructura tus respuestas de forma directa y profesional.
@@ -193,9 +187,9 @@ class _ChatPageState extends State<ChatPage> {
                   'content': msg.text,
                 }),
           ],
-          'temperature': 0.2,  
-          'max_tokens': 800,   
-          'stream': false,    
+          'temperature': 0.2,
+          'max_tokens': 800,
+          'stream': false,
         }),
       );
 
@@ -216,7 +210,8 @@ class _ChatPageState extends State<ChatPage> {
           _isLoading = false;
         });
       } else {
-        final errorMessage = 'Error al conectar con LM Studio: ${response.statusCode}\n\nVerifica que el servidor esté ejecutándose.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl';
+        final errorMessage =
+            'Error al conectar con LM Studio: ${response.statusCode}\n\nVerifica que el servidor esté ejecutándose.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl';
 
         final errorMessageObj = ChatMessage(
           text: errorMessage,
@@ -224,14 +219,16 @@ class _ChatPageState extends State<ChatPage> {
           timestamp: DateTime.now(),
         );
 
-        await _chatService.saveMessage(_currentConversationId!, errorMessageObj);
+        await _chatService.saveMessage(
+            _currentConversationId!, errorMessageObj);
 
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
-      final errorMessage = 'Error de conexión con LM Studio: $e\n\nVerifica tu conexión y que el servidor esté activo.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl\n\nSi usas Android emulador, asegúrate de que LM Studio esté configurado para aceptar conexiones desde 10.0.2.2';
+      final errorMessage =
+          'Error: $e\n\nVerifica tu conexión y que el servidor esté activo.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl';
 
       try {
         if (_currentConversationId != null) {
@@ -240,7 +237,8 @@ class _ChatPageState extends State<ChatPage> {
             isUser: false,
             timestamp: DateTime.now(),
           );
-          await _chatService.saveMessage(_currentConversationId!, errorMessageObj);
+          await _chatService.saveMessage(
+              _currentConversationId!, errorMessageObj);
         }
       } catch (saveError) {
         print('Error al guardar mensaje de error: $saveError');
@@ -255,11 +253,15 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   String _cleanResponse(String response) {
-    response = response.replaceAll(RegExp(r'<think>.*?</think>', dotAll: true), '');
+    response =
+        response.replaceAll(RegExp(r'<think>.*?</think>', dotAll: true), '');
     response = response.replaceAll('<think>', '');
     response = response.replaceAll('</think>', '');
     response = response.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-    response = response.replaceAll(RegExp(r'\[La respuesta parece incompleta\. Por favor, reformula tu pregunta para obtener más detalles\.\]'), '');
+    response = response.replaceAll(
+        RegExp(
+            r'\[La respuesta parece incompleta\. Por favor, reformula tu pregunta para obtener más detalles\.\]'),
+        '');
     return response.trim();
   }
 
@@ -273,13 +275,11 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _isDarkMode 
+      backgroundColor: _isDarkMode
           ? const Color.fromARGB(255, 20, 24, 27)
           : Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: _isDarkMode 
-            ? const Color(0xFF212836)
-            : Colors.white,
+        backgroundColor: _isDarkMode ? const Color(0xFF212836) : Colors.white,
         title: Row(
           children: [
             Text(
@@ -310,7 +310,7 @@ class _ChatPageState extends State<ChatPage> {
         actions: [
           IconButton(
             icon: Icon(
-              Icons.add_comment, 
+              Icons.add_comment,
               color: _isDarkMode ? Colors.white : Colors.black87,
             ),
             onPressed: _startNewConversation,
@@ -319,7 +319,7 @@ class _ChatPageState extends State<ChatPage> {
           if (_currentConversationId != null)
             IconButton(
               icon: Icon(
-                Icons.refresh, 
+                Icons.refresh,
                 color: _isDarkMode ? Colors.white : Colors.black87,
               ),
               onPressed: () {
@@ -327,17 +327,16 @@ class _ChatPageState extends State<ChatPage> {
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
-                      backgroundColor: _isDarkMode 
-                          ? const Color(0xFF212836)
-                          : Colors.white,
+                      backgroundColor:
+                          _isDarkMode ? const Color(0xFF212836) : Colors.white,
                       title: Text(
-                        'Confirmar', 
+                        'Confirmar',
                         style: TextStyle(
                           color: _isDarkMode ? Colors.white : Colors.black87,
                         ),
                       ),
                       content: Text(
-                        '¿Deseas eliminar esta conversación?', 
+                        '¿Deseas eliminar esta conversación?',
                         style: TextStyle(
                           color: _isDarkMode ? Colors.white70 : Colors.black54,
                         ),
@@ -345,9 +344,10 @@ class _ChatPageState extends State<ChatPage> {
                       actions: [
                         TextButton(
                           child: Text(
-                            'Cancelar', 
+                            'Cancelar',
                             style: TextStyle(
-                              color: _isDarkMode ? Colors.white70 : Colors.black54,
+                              color:
+                                  _isDarkMode ? Colors.white70 : Colors.black54,
                             ),
                           ),
                           onPressed: () {
@@ -356,12 +356,13 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                         TextButton(
                           child: const Text(
-                            'Eliminar', 
+                            'Eliminar',
                             style: TextStyle(color: Colors.red),
                           ),
                           onPressed: () async {
                             if (_currentConversationId != null) {
-                              await _chatService.deleteConversation(_currentConversationId!);
+                              await _chatService
+                                  .deleteConversation(_currentConversationId!);
                               _startNewConversation();
                             }
                             Navigator.of(context).pop();
@@ -391,6 +392,7 @@ class _ChatPageState extends State<ChatPage> {
                     },
                   ),
           ),
+          
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -400,6 +402,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ),
             ),
+          
           _buildInputArea(),
         ],
       ),
@@ -408,60 +411,58 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-                  'assets/images/yonalogo.png', 
-                  height: 250,
-                  width: 250,
-                ),          
-          const SizedBox(height: 5),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Text(
-              'Tu entrenador personal virtual. Hazme cualquier pregunta sobre nutrición, ejercicios o estilo de vida saludable.',
-              style: TextStyle(
-                color: _isDarkMode ? Colors.white70 : Colors.black54,
-                fontSize: 16,
-              ),
-              textAlign: TextAlign.center,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/yonalogo.png',
+              height: 200,
+              width: 200,
             ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              //TESTEO (BORRAR)
-              ElevatedButton(
-                onPressed: () {
-                  _messageController.text = '¿Puedes recomendarme una rutina de ejercicios para principiantes?';
-                  _sendMessage();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A5D3A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Text(
+                'Tu entrenador personal virtual. Hazme cualquier pregunta sobre nutrición, ejercicios o estilo de vida saludable.',
+                style: TextStyle(
+                  color: _isDarkMode ? Colors.white70 : Colors.black54,
+                  fontSize: 16,
                 ),
-                child: const Text(
-                  'Rutina de ejercicios',
-                  style: TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                _messageController.text =
+                    '¿Puedes recomendarme una rutina de ejercicios para principiantes?';
+                _sendMessage();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A5D3A),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
-            ],
-          ),
-        ],
+              child: const Text(
+                'Rutina de ejercicios',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMessageItem(ChatMessage message) {
-    bool isLongMessage = !message.isUser && 
-                        (message.text.length > 300 || 
-                         message.text.split('\n').length > 6);
+    bool isLongMessage = !message.isUser &&
+        (message.text.length > 300 || message.text.split('\n').length > 6);
 
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -473,17 +474,17 @@ class _ChatPageState extends State<ChatPage> {
         decoration: BoxDecoration(
           color: message.isUser
               ? const Color(0xFF1A5D3A)
-              : (_isDarkMode 
-                  ? const Color(0xFF212836)
-                  : Colors.white),
+              : (_isDarkMode ? const Color(0xFF212836) : Colors.white),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: !_isDarkMode && !message.isUser ? [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
+          boxShadow: !_isDarkMode && !message.isUser
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         padding: const EdgeInsets.all(12.0),
         child: isLongMessage
@@ -494,8 +495,8 @@ class _ChatPageState extends State<ChatPage> {
             : Text(
                 message.text,
                 style: TextStyle(
-                  color: message.isUser 
-                      ? Colors.white 
+                  color: message.isUser
+                      ? Colors.white
                       : (_isDarkMode ? Colors.white : Colors.black87),
                 ),
               ),
@@ -506,25 +507,31 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildInputArea() {
     return Container(
       decoration: BoxDecoration(
-        color: _isDarkMode 
-            ? const Color(0xFF212836)
-            : Colors.white,
+        color: _isDarkMode ? const Color(0xFF212836) : Colors.white,
         border: Border(
           top: BorderSide(
-            color: _isDarkMode ? Colors.white10 : Colors.black12, 
+            color: _isDarkMode ? Colors.white10 : Colors.black12,
             width: 1,
           ),
         ),
-        boxShadow: !_isDarkMode ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
-          ),
-        ] : null,
+        boxShadow: !_isDarkMode
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ]
+            : null,
       ),
-      padding: const EdgeInsets.all(8.0),
+      padding: EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        top: 16.0,
+        bottom: 16.0 + MediaQuery.of(context).viewPadding.bottom,
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: TextField(
@@ -535,9 +542,8 @@ class _ChatPageState extends State<ChatPage> {
                   color: _isDarkMode ? Colors.white54 : Colors.black54,
                 ),
                 filled: true,
-                fillColor: _isDarkMode 
-                    ? const Color(0xFF1E2730)
-                    : Colors.grey[100],
+                fillColor:
+                    _isDarkMode ? const Color(0xFF1E2730) : Colors.grey[100],
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -550,7 +556,8 @@ class _ChatPageState extends State<ChatPage> {
               style: TextStyle(
                 color: _isDarkMode ? Colors.white : Colors.black87,
               ),
-              maxLines: null,
+              maxLines: 4,
+              minLines: 1,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _sendMessage(),
             ),
@@ -594,10 +601,10 @@ class _ExpandableMessageTextState extends State<_ExpandableMessageText> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SelectableText(
-          _isExpanded 
-              ? widget.messageText 
-              : (widget.messageText.length > 150 
-                  ? '${widget.messageText.substring(0, 150)}...' 
+          _isExpanded
+              ? widget.messageText
+              : (widget.messageText.length > 150
+                  ? '${widget.messageText.substring(0, 150)}...'
                   : widget.messageText),
           style: TextStyle(
             color: widget.isDarkMode ? Colors.white : Colors.black87,
