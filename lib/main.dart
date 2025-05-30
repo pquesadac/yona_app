@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:yona_app/firebase_options.dart';
-import 'package:yona_app/services/auth_service.dart';
-import 'screens/welcome_page.dart';
-import 'screens/login_page.dart';
-import 'screens/register_page.dart';
-import 'screens/home_page.dart';
+import 'package:yona_app/services/services.dart';
+import 'package:yona_app/screens/screens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

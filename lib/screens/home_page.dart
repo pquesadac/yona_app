@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:yona_app/services/theme_service.dart';
-import 'chat_page.dart';
-import 'history_page.dart';
-import 'settings_page.dart';
+import 'package:yona_app/services/services.dart';
+import 'package:yona_app/screens/screens.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);

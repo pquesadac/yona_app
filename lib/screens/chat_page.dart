@@ -4,8 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/chat_service.dart';
-import '../services/theme_service.dart';
+import 'package:yona_app/services/services.dart';
 
 class ChatPage extends StatefulWidget {
   final String? conversationId;

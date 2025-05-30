@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/chat_service.dart';
-import '../services/theme_service.dart';
-import 'chat_page.dart';
+import 'package:yona_app/services/services.dart';
+import 'package:yona_app/screens/screens.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({Key? key}) : super(key: key);

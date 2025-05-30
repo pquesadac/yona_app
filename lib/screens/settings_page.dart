@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // Para kIsWeb
-import 'package:yona_app/services/theme_service.dart';
-import '../services/auth_service.dart';
+import 'package:yona_app/services/services.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -416,6 +415,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _logout() async {
     try {
+      await ThemeService.setTheme(true);
       await _authService.signOut();
       if (mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil(
