@@ -15,7 +15,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final AuthService _authService = AuthService();
-  
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -29,7 +29,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _showErrorSnackBar(String message) {
+  void _ErrorLogin(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -62,7 +62,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     try {
       print('Iniciando proceso de registro...');
-      
+
       final result = await _authService.registerWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -74,9 +74,9 @@ class _RegisterPageState extends State<RegisterPage> {
       if (result != null && result.user != null) {
         _showSuccessSnackBar('¡Cuenta creada exitosamente!');
         print('Registro exitoso - Navegando a home...');
-        
+
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         if (mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/home',
@@ -86,7 +86,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       print('Error durante el registro: $e');
-      _showErrorSnackBar(e.toString());
+      _ErrorLogin(e.toString());
     } finally {
       if (mounted) {
         setState(() {
@@ -126,7 +126,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
-                  
+
                   TextFormField(
                     controller: _usernameController,
                     enabled: !_isLoading,
@@ -159,7 +159,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   TextFormField(
                     controller: _emailController,
                     enabled: !_isLoading,
@@ -187,7 +187,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   TextFormField(
                     controller: _passwordController,
                     enabled: !_isLoading,
@@ -232,7 +232,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   TextFormField(
                     controller: _confirmPasswordController,
                     enabled: !_isLoading,
@@ -271,7 +271,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   const SizedBox(height: 40),
-                  
+
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -297,7 +297,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                     ),
                   ),
-                  
+
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
                     child: Row(
@@ -318,50 +318,50 @@ class _RegisterPageState extends State<RegisterPage> {
                       ],
                     ),
                   ),
-                  
-                  // Botones de redes sociales
+
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Botón de Google
+
                       _socialButton(
                         onTap: () {
-                          _showErrorSnackBar('Funcionalidad no disponible aún');
+                          _ErrorLogin('Funcionalidad no disponible aún');
                         },
                         icon: Icons.g_mobiledata,
                       ),
                       const SizedBox(width: 16),
-                      
-                      // Botón de Apple
+
+
                       _socialButton(
                         onTap: () {
-                          _showErrorSnackBar('Funcionalidad no disponible aún');
+                          _ErrorLogin('Funcionalidad no disponible aún');
                         },
                         icon: Icons.apple,
                       ),
                       const SizedBox(width: 16),
-                      
-                      // Botón de GitHub
+
+
                       _socialButton(
                         onTap: () {
-                          _showErrorSnackBar('Funcionalidad no disponible aún');
+                          _ErrorLogin('Funcionalidad no disponible aún');
                         },
                         icon: Icons.code,
                       ),
                       const SizedBox(width: 16),
-                      
-                      // Botón de LinkedIn
+
+
                       _socialButton(
                         onTap: () {
-                          _showErrorSnackBar('Funcionalidad no disponible aún');
+                          _ErrorLogin('Funcionalidad no disponible aún');
                         },
                         icon: Icons.link,
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

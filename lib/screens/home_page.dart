@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // Para kIsWeb
+import 'package:flutter/foundation.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yona_app/services/theme_service.dart';
 import 'chat_page.dart';
 import 'history_page.dart';
 import 'settings_page.dart';
@@ -14,43 +16,74 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   bool _isDrawerOpen = false;
-  
+  bool _isDarkMode = true; 
+
   final List<Widget> _pages = [
     const ChatPage(),
     const HistoryPage(),
     const SettingsPage(),
   ];
 
-  // Determinar si es móvil
+
   bool get _isMobile => !kIsWeb && MediaQuery.of(context).size.width < 600;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+
+    ThemeService.addListener(() {
+      _loadTheme();
+    });
+  }
+
+  @override
+  void dispose() {
+    ThemeService.removeListener(() {
+      _loadTheme();
+    });
+    super.dispose();
+  }
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isDarkMode = prefs.getBool('isDarkMode') ?? true; 
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 20, 24, 27),
+      backgroundColor: _isDarkMode
+          ? const Color.fromARGB(255, 20, 24, 27)
+          : Colors.grey[100],
       body: Row(
         children: [
           if (!_isMobile) ...[
             _buildNavigationRail(),
             Container(
               width: 1,
-              color: Colors.white24,
+              color: _isDarkMode ? Colors.white24 : Colors.grey.shade300,
             ),
           ],
-          
+
           Expanded(
             child: Stack(
               children: [
                 _pages[_selectedIndex],
-                
+
                 if (_isMobile)
                   Positioned(
-                    top: MediaQuery.of(context).padding.top + kToolbarHeight + 8, 
+                    top:
+                        MediaQuery.of(context).padding.top + kToolbarHeight + 8,
                     left: _selectedIndex == 2 ? null : 16,
                     right: _selectedIndex == 2 ? 16 : null,
                     child: FloatingActionButton.small(
-                      backgroundColor: const Color(0xFF212836),
-                      foregroundColor: Colors.white,
+                      backgroundColor:
+                          _isDarkMode ? const Color(0xFF212836) : Colors.white,
+                      foregroundColor:
+                          _isDarkMode ? Colors.white : Colors.black87,
                       onPressed: () {
                         setState(() {
                           _isDrawerOpen = !_isDrawerOpen;
@@ -59,7 +92,7 @@ class _HomePageState extends State<HomePage> {
                       child: Icon(_isDrawerOpen ? Icons.close : Icons.menu),
                     ),
                   ),
-                
+
                 if (_isMobile && _isDrawerOpen) ...[
                   Positioned.fill(
                     child: GestureDetector(
@@ -93,7 +126,8 @@ class _HomePageState extends State<HomePage> {
       children: [
         Expanded(
           child: NavigationRail(
-            backgroundColor: const Color(0xFF212836),
+            backgroundColor:
+                _isDarkMode ? const Color(0xFF212836) : Colors.white,
             selectedIndex: _selectedIndex < 2 ? _selectedIndex : null,
             onDestinationSelected: (int index) {
               setState(() {
@@ -105,30 +139,34 @@ class _HomePageState extends State<HomePage> {
             useIndicator: false,
             indicatorColor: Colors.transparent,
             leading: const SizedBox(height: 12),
-            destinations: const [
+            destinations: [
               NavigationRailDestination(
-                icon: Icon(Icons.chat_bubble_outline, color: Colors.white70),
-                selectedIcon: Icon(Icons.chat_bubble, color: Color(0xFF4CAF50)),
-                label: Text('Chat'),
+                icon: Icon(Icons.chat_bubble_outline,
+                    color: _isDarkMode ? Colors.white70 : Colors.black54),
+                selectedIcon:
+                    const Icon(Icons.chat_bubble, color: Color(0xFF4CAF50)),
+                label: const Text('Chat'),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.history, color: Colors.white70),
-                selectedIcon: Icon(Icons.history, color: Color(0xFF4CAF50)),
-                label: Text('Historial'),
+                icon: Icon(Icons.history,
+                    color: _isDarkMode ? Colors.white70 : Colors.black54),
+                selectedIcon:
+                    const Icon(Icons.history, color: Color(0xFF4CAF50)),
+                label: const Text('Historial'),
               ),
             ],
             selectedLabelTextStyle: const TextStyle(
               color: Color(0xFF4CAF50),
               fontWeight: FontWeight.bold,
             ),
-            unselectedLabelTextStyle: const TextStyle(
-              color: Colors.white70,
+            unselectedLabelTextStyle: TextStyle(
+              color: _isDarkMode ? Colors.white70 : Colors.black54,
             ),
           ),
         ),
         Container(
           width: 80,
-          color: const Color(0xFF212836),
+          color: _isDarkMode ? const Color(0xFF212836) : Colors.white,
           child: InkWell(
             onTap: () {
               setState(() {
@@ -142,15 +180,23 @@ class _HomePageState extends State<HomePage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    _selectedIndex == 2 ? Icons.settings : Icons.settings_outlined,
-                    color: _selectedIndex == 2 ? const Color(0xFF4CAF50) : Colors.white70,
+                    _selectedIndex == 2
+                        ? Icons.settings
+                        : Icons.settings_outlined,
+                    color: _selectedIndex == 2
+                        ? const Color(0xFF4CAF50)
+                        : (_isDarkMode ? Colors.white70 : Colors.black54),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Ajustes',
                     style: TextStyle(
-                      color: _selectedIndex == 2 ? const Color(0xFF4CAF50) : Colors.white70,
-                      fontWeight: _selectedIndex == 2 ? FontWeight.bold : FontWeight.normal,
+                      color: _selectedIndex == 2
+                          ? const Color(0xFF4CAF50)
+                          : (_isDarkMode ? Colors.white70 : Colors.black54),
+                      fontWeight: _selectedIndex == 2
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       fontSize: 12,
                     ),
                   ),
@@ -167,9 +213,9 @@ class _HomePageState extends State<HomePage> {
     return Container(
       width: 250,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        color: Color(0xFF212836),
-        boxShadow: [
+      decoration: BoxDecoration(
+        color: _isDarkMode ? const Color(0xFF212836) : Colors.white,
+        boxShadow: const [
           BoxShadow(
             color: Colors.black26,
             blurRadius: 10,
@@ -183,13 +229,13 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.all(20),
               width: double.infinity,
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Yona',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: _isDarkMode ? Colors.white : Colors.black87,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -197,17 +243,18 @@ class _HomePageState extends State<HomePage> {
                   Text(
                     'Tu entrenador virtual',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: _isDarkMode ? Colors.white70 : Colors.black54,
                       fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            
-            const Divider(color: Colors.white24, height: 1),
-            
-            // Opciones de navegación
+
+            Divider(
+                color: _isDarkMode ? Colors.white24 : Colors.grey.shade300,
+                height: 1),
+
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -246,21 +293,27 @@ class _HomePageState extends State<HomePage> {
     required int index,
   }) {
     final isSelected = _selectedIndex == index;
-    
+
     return ListTile(
       leading: Icon(
         isSelected ? selectedIcon : icon,
-        color: isSelected ? const Color(0xFF4CAF50) : Colors.white70,
+        color: isSelected
+            ? const Color(0xFF4CAF50)
+            : (_isDarkMode ? Colors.white70 : Colors.black54),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? const Color(0xFF4CAF50) : Colors.white70,
+          color: isSelected
+              ? const Color(0xFF4CAF50)
+              : (_isDarkMode ? Colors.white70 : Colors.black54),
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       selected: isSelected,
-      selectedTileColor: const Color(0xFF1A5D3A).withOpacity(0.3),
+      selectedTileColor:
+          (_isDarkMode ? const Color(0xFF1A5D3A) : const Color(0xFF4CAF50))
+              .withOpacity(0.3),
       onTap: () {
         setState(() {
           _selectedIndex = index;

@@ -5,10 +5,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/chat_service.dart';
+import '../services/theme_service.dart';
 
 class ChatPage extends StatefulWidget {
   final String? conversationId;
-  
+
   const ChatPage({Key? key, this.conversationId}) : super(key: key);
 
   @override
@@ -22,8 +23,9 @@ class _ChatPageState extends State<ChatPage> {
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
   String? _currentConversationId;
-  
-  // URLs para diferentes plataformas
+  bool _isDarkMode = true;
+
+
   String get _lmStudioUrl {
     if (kIsWeb) {
       return 'http://127.0.0.1:1234/v1/chat/completions';
@@ -39,8 +41,32 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    _loadTheme();
     _initializeChat();
     _debugPrintUrl();
+    
+    ThemeService.addListener(_onThemeChanged);
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    ThemeService.removeListener(_onThemeChanged);
+    super.dispose();
+  }
+
+  void _onThemeChanged() {
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final isDark = await ThemeService.getTheme();
+    if (mounted) {
+      setState(() {
+        _isDarkMode = isDark;
+      });
+    }
   }
 
   Future<void> _initializeChat() async {
@@ -70,7 +96,7 @@ class _ChatPageState extends State<ChatPage> {
         }
       },
       onError: (error) {
-        print('❌ CHAT: Error al cargar mensajes: $error');
+        print('Error al cargar mensajes: $error');
       },
     );
   }
@@ -80,12 +106,12 @@ class _ChatPageState extends State<ChatPage> {
     print('Using URL: $_lmStudioUrl');
   }
 
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
+
+
+
+
+
+
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -177,7 +203,7 @@ class _ChatPageState extends State<ChatPage> {
         final data = jsonDecode(response.body);
         var aiResponse = data['choices'][0]['message']['content'] as String;
         aiResponse = _cleanResponse(aiResponse);
-        
+
         final aiMessageObj = ChatMessage(
           text: aiResponse,
           isUser: false,
@@ -191,7 +217,7 @@ class _ChatPageState extends State<ChatPage> {
         });
       } else {
         final errorMessage = 'Error al conectar con LM Studio: ${response.statusCode}\n\nVerifica que el servidor esté ejecutándose.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl';
-        
+
         final errorMessageObj = ChatMessage(
           text: errorMessage,
           isUser: false,
@@ -199,14 +225,14 @@ class _ChatPageState extends State<ChatPage> {
         );
 
         await _chatService.saveMessage(_currentConversationId!, errorMessageObj);
-        
+
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
       final errorMessage = 'Error de conexión con LM Studio: $e\n\nVerifica tu conexión y que el servidor esté activo.\nPlataforma: ${kIsWeb ? 'Web' : Platform.operatingSystem}\nURL: $_lmStudioUrl\n\nSi usas Android emulador, asegúrate de que LM Studio esté configurado para aceptar conexiones desde 10.0.2.2';
-      
+
       try {
         if (_currentConversationId != null) {
           final errorMessageObj = ChatMessage(
@@ -217,7 +243,7 @@ class _ChatPageState extends State<ChatPage> {
           await _chatService.saveMessage(_currentConversationId!, errorMessageObj);
         }
       } catch (saveError) {
-        print('❌ Error al guardar mensaje de error: $saveError');
+        print('Error al guardar mensaje de error: $saveError');
       }
 
       setState(() {
@@ -247,26 +273,32 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 20, 24, 27),
+      backgroundColor: _isDarkMode 
+          ? const Color.fromARGB(255, 20, 24, 27)
+          : Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: const Color(0xFF212836),
+        backgroundColor: _isDarkMode 
+            ? const Color(0xFF212836)
+            : Colors.white,
         title: Row(
           children: [
-            const Text(
+            Text(
               'Yona',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: _isDarkMode ? Colors.white : Colors.black87,
+              ),
             ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: _isDarkMode ? Colors.white24 : Colors.black12,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 kIsWeb ? 'Web' : Platform.operatingSystem,
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: _isDarkMode ? Colors.white70 : Colors.black54,
                   fontSize: 10,
                 ),
               ),
@@ -274,33 +306,59 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
         centerTitle: true,
+        elevation: _isDarkMode ? 0 : 1,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_comment, color: Colors.white),
+            icon: Icon(
+              Icons.add_comment, 
+              color: _isDarkMode ? Colors.white : Colors.black87,
+            ),
             onPressed: _startNewConversation,
             tooltip: 'Nueva conversación',
           ),
           if (_currentConversationId != null)
             IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white),
+              icon: Icon(
+                Icons.refresh, 
+                color: _isDarkMode ? Colors.white : Colors.black87,
+              ),
               onPressed: () {
                 showDialog(
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
-                      backgroundColor: const Color(0xFF212836),
-                      title: const Text('Confirmar', style: TextStyle(color: Colors.white)),
-                      content: const Text('¿Deseas eliminar esta conversación?', 
-                        style: TextStyle(color: Colors.white70)),
+                      backgroundColor: _isDarkMode 
+                          ? const Color(0xFF212836)
+                          : Colors.white,
+                      title: Text(
+                        'Confirmar', 
+                        style: TextStyle(
+                          color: _isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      content: Text(
+                        '¿Deseas eliminar esta conversación?', 
+                        style: TextStyle(
+                          color: _isDarkMode ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
                       actions: [
                         TextButton(
-                          child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+                          child: Text(
+                            'Cancelar', 
+                            style: TextStyle(
+                              color: _isDarkMode ? Colors.white70 : Colors.black54,
+                            ),
+                          ),
                           onPressed: () {
                             Navigator.of(context).pop();
                           },
                         ),
                         TextButton(
-                          child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+                          child: const Text(
+                            'Eliminar', 
+                            style: TextStyle(color: Colors.red),
+                          ),
                           onPressed: () async {
                             if (_currentConversationId != null) {
                               await _chatService.deleteConversation(_currentConversationId!);
@@ -359,12 +417,12 @@ class _ChatPageState extends State<ChatPage> {
                   width: 250,
                 ),          
           const SizedBox(height: 5),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: Text(
               'Tu entrenador personal virtual. Hazme cualquier pregunta sobre nutrición, ejercicios o estilo de vida saludable.',
               style: TextStyle(
-                color: Colors.white70,
+                color: _isDarkMode ? Colors.white70 : Colors.black54,
                 fontSize: 16,
               ),
               textAlign: TextAlign.center,
@@ -374,6 +432,7 @@ class _ChatPageState extends State<ChatPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              //TESTEO (BORRAR)
               ElevatedButton(
                 onPressed: () {
                   _messageController.text = '¿Puedes recomendarme una rutina de ejercicios para principiantes?';
@@ -381,6 +440,7 @@ class _ChatPageState extends State<ChatPage> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1A5D3A),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -402,7 +462,7 @@ class _ChatPageState extends State<ChatPage> {
     bool isLongMessage = !message.isUser && 
                         (message.text.length > 300 || 
                          message.text.split('\n').length > 6);
-    
+
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -413,15 +473,31 @@ class _ChatPageState extends State<ChatPage> {
         decoration: BoxDecoration(
           color: message.isUser
               ? const Color(0xFF1A5D3A)
-              : const Color(0xFF212836),
+              : (_isDarkMode 
+                  ? const Color(0xFF212836)
+                  : Colors.white),
           borderRadius: BorderRadius.circular(12),
+          boxShadow: !_isDarkMode && !message.isUser ? [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
         ),
         padding: const EdgeInsets.all(12.0),
         child: isLongMessage
-            ? _ExpandableMessageText(messageText: message.text)
+            ? _ExpandableMessageText(
+                messageText: message.text,
+                isDarkMode: _isDarkMode,
+              )
             : Text(
                 message.text,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: message.isUser 
+                      ? Colors.white 
+                      : (_isDarkMode ? Colors.white : Colors.black87),
+                ),
               ),
       ),
     );
@@ -429,11 +505,23 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildInputArea() {
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF212836),
+      decoration: BoxDecoration(
+        color: _isDarkMode 
+            ? const Color(0xFF212836)
+            : Colors.white,
         border: Border(
-          top: BorderSide(color: Colors.white10, width: 1),
+          top: BorderSide(
+            color: _isDarkMode ? Colors.white10 : Colors.black12, 
+            width: 1,
+          ),
         ),
+        boxShadow: !_isDarkMode ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ] : null,
       ),
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -443,9 +531,13 @@ class _ChatPageState extends State<ChatPage> {
               controller: _messageController,
               decoration: InputDecoration(
                 hintText: 'Escribe tu mensaje...',
-                hintStyle: const TextStyle(color: Colors.white54),
+                hintStyle: TextStyle(
+                  color: _isDarkMode ? Colors.white54 : Colors.black54,
+                ),
                 filled: true,
-                fillColor: const Color(0xFF1E2730),
+                fillColor: _isDarkMode 
+                    ? const Color(0xFF1E2730)
+                    : Colors.grey[100],
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -455,7 +547,9 @@ class _ChatPageState extends State<ChatPage> {
                   vertical: 12,
                 ),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: _isDarkMode ? Colors.white : Colors.black87,
+              ),
               maxLines: null,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _sendMessage(),
@@ -480,8 +574,12 @@ class _ChatPageState extends State<ChatPage> {
 
 class _ExpandableMessageText extends StatefulWidget {
   final String messageText;
+  final bool isDarkMode;
 
-  const _ExpandableMessageText({required this.messageText});
+  const _ExpandableMessageText({
+    required this.messageText,
+    required this.isDarkMode,
+  });
 
   @override
   State<_ExpandableMessageText> createState() => _ExpandableMessageTextState();
@@ -501,8 +599,8 @@ class _ExpandableMessageTextState extends State<_ExpandableMessageText> {
               : (widget.messageText.length > 150 
                   ? '${widget.messageText.substring(0, 150)}...' 
                   : widget.messageText),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: widget.isDarkMode ? Colors.white : Colors.black87,
             fontSize: 16,
           ),
         ),

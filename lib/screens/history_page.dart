@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/chat_service.dart';
+import '../services/theme_service.dart';
 import 'chat_page.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -13,23 +14,57 @@ class HistoryPage extends StatefulWidget {
 class _HistoryPageState extends State<HistoryPage> {
   final ChatService _chatService = ChatService();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
+  bool _isDarkMode = true;
 
   @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+    
+    ThemeService.addListener(_onThemeChanged);
+  }
+
+  @override
+  void dispose() {
+    ThemeService.removeListener(_onThemeChanged);
+    super.dispose();
+  }
+
+  void _onThemeChanged() {
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final isDark = await ThemeService.getTheme();
+    if (mounted) {
+      setState(() {
+        _isDarkMode = isDark;
+      });
+    }
+  }
+@override
   Widget build(BuildContext context) {
     if (_currentUser == null) {
       return _buildNotAuthenticatedState();
     }
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 20, 24, 27),
+      backgroundColor: _isDarkMode 
+          ? const Color.fromARGB(255, 20, 24, 27) 
+          : Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: const Color(0xFF212836),
-        title: const Text(
+        backgroundColor: _isDarkMode 
+            ? const Color(0xFF212836) 
+            : Colors.white,
+        title: Text(
           'Historial de Conversaciones',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: _isDarkMode ? Colors.white : Colors.black87,
+          ),
         ),
         centerTitle: true,
         automaticallyImplyLeading: false,
+        elevation: _isDarkMode ? 0 : 1,
       ),
       body: StreamBuilder<List<Conversation>>(
         stream: _chatService.getUserConversations(),
@@ -59,31 +94,33 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget _buildNotAuthenticatedState() {
-    return const Scaffold(
-      backgroundColor: Color.fromARGB(255, 20, 24, 27),
+    return Scaffold(
+      backgroundColor: _isDarkMode 
+          ? const Color.fromARGB(255, 20, 24, 27) 
+          : Colors.grey[100],
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.login,
               size: 100,
               color: Color(0xFF4CAF50),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             Text(
               'Inicia Sesión',
               style: TextStyle(
-                color: Colors.white,
+                color: _isDarkMode ? Colors.white : Colors.black87,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               'Debes iniciar sesión para ver tu historial',
               style: TextStyle(
-                color: Colors.white70,
+                color: _isDarkMode ? Colors.white70 : Colors.black54,
                 fontSize: 16,
               ),
               textAlign: TextAlign.center,
@@ -105,10 +142,10 @@ class _HistoryPageState extends State<HistoryPage> {
             color: Colors.red,
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Error',
             style: TextStyle(
-              color: Colors.white,
+              color: _isDarkMode ? Colors.white : Colors.black87,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
@@ -118,8 +155,8 @@ class _HistoryPageState extends State<HistoryPage> {
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: Text(
               'Error al cargar conversaciones: $error',
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: _isDarkMode ? Colors.white70 : Colors.black54,
                 fontSize: 16,
               ),
               textAlign: TextAlign.center,
@@ -128,15 +165,16 @@ class _HistoryPageState extends State<HistoryPage> {
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              setState(() {}); // Recargar
+              setState(() {}); 
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4CAF50),
+              foregroundColor: Colors.white,
             ),
-            child: const Text(
-              'Reintentar',
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text('Reintentar'),
+
+
+
           ),
         ],
       ),
@@ -154,21 +192,21 @@ class _HistoryPageState extends State<HistoryPage> {
             color: Color(0xFF4CAF50),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Sin Conversaciones',
             style: TextStyle(
-              color: Colors.white,
+              color: _isDarkMode ? Colors.white : Colors.black87,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: Text(
               'Aún no has iniciado ninguna conversación.\n¡Ve al chat y comienza a hablar con Yona!',
               style: TextStyle(
-                color: Colors.white70,
+                color: _isDarkMode ? Colors.white70 : Colors.black54,
                 fontSize: 16,
               ),
               textAlign: TextAlign.center,
@@ -183,13 +221,14 @@ class _HistoryPageState extends State<HistoryPage> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4CAF50),
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-            icon: const Icon(Icons.chat, color: Colors.white),
-            label: const Text(
-              'Ir al Chat',
-              style: TextStyle(color: Colors.white),
-            ),
+            icon: const Icon(Icons.chat),
+            label: const Text('Ir al Chat'),
+
+
+
           ),
         ],
       ),
@@ -209,8 +248,11 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Widget _buildConversationCard(Conversation conversation) {
     return Card(
-      color: const Color(0xFF212836),
+      color: _isDarkMode 
+          ? const Color(0xFF212836) 
+          : Colors.white,
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: _isDarkMode ? 0 : 2,
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: Container(
@@ -227,8 +269,8 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         title: Text(
           conversation.title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: _isDarkMode ? Colors.white : Colors.black87,
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
@@ -241,43 +283,66 @@ class _HistoryPageState extends State<HistoryPage> {
             const SizedBox(height: 4),
             Text(
               '${conversation.messageCount} mensajes',
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: _isDarkMode ? Colors.white54 : Colors.black54,
                 fontSize: 14,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               _formatDate(conversation.lastMessage),
-              style: const TextStyle(
-                color: Colors.white38,
+              style: TextStyle(
+                color: _isDarkMode ? Colors.white38 : Colors.black38,
                 fontSize: 12,
               ),
             ),
           ],
         ),
         trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.white70),
-          color: const Color(0xFF2A3441),
+          icon: Icon(
+            Icons.more_vert, 
+            color: _isDarkMode ? Colors.white70 : Colors.black54,
+          ),
+          color: _isDarkMode 
+              ? const Color(0xFF2A3441) 
+              : Colors.white,
           onSelected: (value) => _handleMenuAction(value, conversation),
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'open',
               child: Row(
                 children: [
-                  Icon(Icons.open_in_new, color: Colors.white, size: 20),
-                  SizedBox(width: 12),
-                  Text('Abrir', style: TextStyle(color: Colors.white)),
+                  Icon(
+                    Icons.open_in_new, 
+                    color: _isDarkMode ? Colors.white : Colors.black87, 
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Abrir', 
+                    style: TextStyle(
+                      color: _isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'rename',
               child: Row(
                 children: [
-                  Icon(Icons.edit, color: Colors.white, size: 20),
-                  SizedBox(width: 12),
-                  Text('Renombrar', style: TextStyle(color: Colors.white)),
+                  Icon(
+                    Icons.edit, 
+                    color: _isDarkMode ? Colors.white : Colors.black87, 
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Renombrar', 
+                    style: TextStyle(
+                      color: _isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -312,7 +377,6 @@ class _HistoryPageState extends State<HistoryPage> {
       return '${date.day}/${date.month}/${date.year}';
     }
   }
-
   void _handleMenuAction(String action, Conversation conversation) {
     switch (action) {
       case 'open':
@@ -338,23 +402,34 @@ class _HistoryPageState extends State<HistoryPage> {
 
   void _showRenameDialog(Conversation conversation) {
     final TextEditingController controller = TextEditingController(text: conversation.title);
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF212836),
-        title: const Text('Renombrar Conversación', style: TextStyle(color: Colors.white)),
+        backgroundColor: _isDarkMode 
+            ? const Color(0xFF212836) 
+            : Colors.white,
+        title: Text(
+          'Renombrar Conversación', 
+          style: TextStyle(
+            color: _isDarkMode ? Colors.white : Colors.black87,
+          ),
+        ),
         content: TextField(
           controller: controller,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(
+            color: _isDarkMode ? Colors.white : Colors.black87,
+          ),
+          decoration: InputDecoration(
             hintText: 'Nuevo nombre...',
-            hintStyle: TextStyle(color: Colors.white54),
+            hintStyle: TextStyle(
+              color: _isDarkMode ? Colors.white54 : Colors.black54,
+            ),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF4CAF50)),
+              borderSide: BorderSide(color: const Color(0xFF4CAF50)),
             ),
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF4CAF50)),
+              borderSide: BorderSide(color: const Color(0xFF4CAF50)),
             ),
           ),
           maxLength: 100,
@@ -362,7 +437,12 @@ class _HistoryPageState extends State<HistoryPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+            child: Text(
+              'Cancelar', 
+              style: TextStyle(
+                color: _isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -389,7 +469,10 @@ class _HistoryPageState extends State<HistoryPage> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Guardar', style: TextStyle(color: Color(0xFF4CAF50))),
+            child: const Text(
+              'Guardar', 
+              style: TextStyle(color: Color(0xFF4CAF50)),
+            ),
           ),
         ],
       ),
@@ -400,16 +483,30 @@ class _HistoryPageState extends State<HistoryPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF212836),
-        title: const Text('Eliminar Conversación', style: TextStyle(color: Colors.white)),
+        backgroundColor: _isDarkMode 
+            ? const Color(0xFF212836) 
+            : Colors.white,
+        title: Text(
+          'Eliminar Conversación', 
+          style: TextStyle(
+            color: _isDarkMode ? Colors.white : Colors.black87,
+          ),
+        ),
         content: Text(
           '¿Estás seguro de que quieres eliminar "${conversation.title}"?\n\nEsta acción no se puede deshacer.',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(
+            color: _isDarkMode ? Colors.white70 : Colors.black54,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+            child: Text(
+              'Cancelar', 
+              style: TextStyle(
+                color: _isDarkMode ? Colors.white70 : Colors.black54,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -432,7 +529,10 @@ class _HistoryPageState extends State<HistoryPage> {
                 );
               }
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            child: const Text(
+              'Eliminar', 
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),

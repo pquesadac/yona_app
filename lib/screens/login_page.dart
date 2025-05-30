@@ -14,7 +14,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
-  
+
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -25,13 +25,13 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _showErrorSnackBar(String message) {
+  void _ErrorLogin(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -58,7 +58,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       print('Iniciando login...');
-      
+
       final result = await _authService.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -69,9 +69,9 @@ class _LoginPageState extends State<LoginPage> {
       if (result != null && result.user != null) {
         _showSuccessSnackBar('¡Bienvenido de nuevo!');
         print('Exitoso - Navegando a home...');
-        
+
         await Future.delayed(const Duration(milliseconds: 500));
-        
+
         if (mounted) {
           Navigator.of(context).pushNamedAndRemoveUntil(
             '/home',
@@ -80,11 +80,11 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         print('result o result.user es null');
-        _showErrorSnackBar('Error: No se pudo completar el login');
+        _ErrorLogin('Error: No se pudo completar el login');
       }
     } catch (e) {
       print('Error: $e');
-      _showErrorSnackBar(e.toString());
+      _ErrorLogin(e.toString());
     } finally {
       if (mounted) {
         setState(() {
@@ -96,9 +96,9 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
-    
+
     if (email.isEmpty) {
-      _showErrorSnackBar('Por favor ingresa tu email para recuperar la contraseña');
+      _ErrorLogin('Por favor ingresa tu email para recuperar la contraseña');
       return;
     }
 
@@ -106,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
       await _authService.resetPassword(email);
       _showSuccessSnackBar('Se ha enviado un email para restablecer tu contraseña');
     } catch (e) {
-      _showErrorSnackBar(e.toString());
+      _ErrorLogin(e.toString());
     }
   }
 
@@ -140,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
-                  
+
                   TextFormField(
                     controller: _emailController,
                     enabled: !_isLoading,
@@ -168,7 +168,7 @@ class _LoginPageState extends State<LoginPage> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  
+
                   TextFormField(
                     controller: _passwordController,
                     enabled: !_isLoading,
@@ -203,7 +203,7 @@ class _LoginPageState extends State<LoginPage> {
                       return null;
                     },
                   ),
-                  
+
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -217,9 +217,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -245,7 +245,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                     ),
                   ),
-                  
+
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 20),
                     child: Row(
@@ -266,46 +266,46 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  
-                  // Botones de redes sociales
+
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _socialButton(
                         onTap: () {
-                          // Implementar Google Sign In
+                          _ErrorLogin('Funcionalidad no disponible aún');
                         },
                         icon: Icons.g_mobiledata,
                       ),
                       const SizedBox(width: 16),
-                      
+
                       _socialButton(
                         onTap: () {
-                          // Implementar Apple Sign In
+                          _ErrorLogin('Funcionalidad no disponible aún');
                         },
                         icon: Icons.apple,
                       ),
                       const SizedBox(width: 16),
-                      
+
                       _socialButton(
                         onTap: () {
-                          // Implementar GitHub Sign In
+                          _ErrorLogin('Funcionalidad no disponible aún');
                         },
                         icon: Icons.code,
                       ),
                       const SizedBox(width: 16),
-                      
+
                       _socialButton(
                         onTap: () {
-                          // Implementar LinkedIn Sign In
+                          _ErrorLogin('Funcionalidad no disponible aún');
                         },
                         icon: Icons.link,
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

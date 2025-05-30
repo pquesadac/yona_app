@@ -101,11 +101,11 @@ class ChatService {
 
     try {
       print('Creando nueva conversación...');
-      
+
       String title = firstMessage.length > 50 
           ? '${firstMessage.substring(0, 47)}...'
           : firstMessage;
-      
+
       final conversationRef = await _firestore
           .collection('users')
           .doc(_currentUserId)
@@ -125,6 +125,7 @@ class ChatService {
     }
   }
 
+  //Guardar mensajes
   Future<void> saveMessage(String conversationId, ChatMessage message) async {
     if (_currentUserId == null) throw 'Usuario no autenticado';
 
@@ -200,7 +201,7 @@ class ChatService {
 
     try {
       print('Eliminando conversación $conversationId...');
-      
+
       final messagesQuery = await _firestore
           .collection('users')
           .doc(_currentUserId)
@@ -259,7 +260,7 @@ class ChatService {
 
     try {
       print('Limpiando conversaciones del usuario...');
-      
+
       final conversationsQuery = await _firestore
           .collection('users')
           .doc(_currentUserId)

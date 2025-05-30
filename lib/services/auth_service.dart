@@ -5,14 +5,14 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Obtener el usuario actual
+
   User? get currentUser {
     final user = _auth.currentUser;
-    print('🔍 AUTH_SERVICE: currentUser = ${user?.uid}');
+    print('currentUser = ${user?.uid}');
     return user;
   }
 
-  // Stream para escuchar cambios en el estado de autenticación con debug
+
   Stream<User?> get authStateChanges {
     print('Creando stream authStateChanges');
     return _auth.authStateChanges().map((User? user) {
@@ -21,7 +21,7 @@ class AuthService {
     });
   }
 
-  // Registro usuario 
+  //Registro 
   Future<UserCredential?> registerWithEmailAndPassword({
     required String email,
     required String password,
@@ -29,8 +29,8 @@ class AuthService {
   }) async {
     try {
       print('Iniciando para $email');
-      
-      // Crear usuario en Firebase Auth con timeout
+
+
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
@@ -44,10 +44,10 @@ class AuthService {
       User? user = result.user;
       if (user != null) {
         print('Guardando datos en Firestore...');
-        
-        // Intentar guardar en Firestore con reintentos
+
+
         await _saveUserToFirestore(user, username, email);
-        
+
         await user.updateDisplayName(username).timeout(
           const Duration(seconds: 10),
           onTimeout: () {
@@ -63,20 +63,20 @@ class AuthService {
       print('FirebaseAuthException - ${e.code}: ${e.message}');
       throw _handleAuthException(e);
     } catch (e) {
-      print('Error inesperado: $e');
+      print('Error: $e');
       if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
         throw 'Conexión lenta. Verifica tu internet e intenta de nuevo.';
       }
-      throw 'Error inesperado: ${e.toString()}';
+      throw 'Error: ${e.toString()}';
     }
   }
 
-  // Método auxiliar para guardar usuario en Firestore con reintentos
+
   Future<void> _saveUserToFirestore(User user, String username, String email) async {
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
         print('Intento $attempt de guardar datos...');
-        
+
         await _firestore.collection('users').doc(user.uid).set({
           'uid': user.uid,
           'username': username.trim(),
@@ -87,10 +87,10 @@ class AuthService {
 
         print('Datos guardados exitosamente');
         return; 
-        
+
       } catch (e) {
         print('Error en intento $attempt: $e');
-        
+
         if (attempt == 3) {
           if (e.toString().contains('permission-denied')) {
             throw 'Error de permisos. Contacta al administrador.';
@@ -100,31 +100,31 @@ class AuthService {
             throw 'Error al guardar datos del usuario: ${e.toString()}';
           }
         }
-        
+
         await Future.delayed(Duration(seconds: attempt));
       }
     }
   }
 
-  // Login con verificación y creación de documento si no existe
+  //Login
   Future<UserCredential?> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
     try {
       print('Iniciando para $email');
-      
+
       UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       ).timeout(
         const Duration(seconds: 30),
         onTimeout: () => throw 'Timeout: Login tardó demasiado. Verifica tu conexión.',
-      );
+      );  
 
       print('Exitoso - UID: ${result.user?.uid}');
 
-      // Verificar y crear documento si no existe
+
       if (result.user != null) {
         await _ensureUserDocumentExists(result.user!);
       }
@@ -134,25 +134,25 @@ class AuthService {
       print('FirebaseAuthException - ${e.code}: ${e.message}');
       throw _handleAuthException(e);
     } catch (e) {
-      print('Error inesperado: $e');
+      print('Error: $e');
       if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
         throw 'Conexión lenta. Verifica tu internet e intenta de nuevo.';
       }
-      throw 'Error inesperado: ${e.toString()}';
+      throw 'Error: ${e.toString()}';
     }
   }
 
-  // Método para asegurar que el documento del usuario existe
+
   Future<void> _ensureUserDocumentExists(User user) async {
     try {
       print('Verificando documento para ${user.uid}');
-      
+
       final docRef = _firestore.collection('users').doc(user.uid);
       final docSnapshot = await docRef.get().timeout(const Duration(seconds: 10));
-      
+
       if (!docSnapshot.exists) {
         print('Documento no existe, creando...');
-        
+
         await docRef.set({
           'uid': user.uid,
           'username': user.displayName ?? 'Usuario',
@@ -161,15 +161,15 @@ class AuthService {
           'lastLogin': FieldValue.serverTimestamp(),
           'recoveredAccount': true, 
         }).timeout(const Duration(seconds: 15));
-        
+
         print('Documento creado exitosamente');
       } else {
         print('Documento existe, actualizando lastLogin...');
-        
+
         await docRef.update({
           'lastLogin': FieldValue.serverTimestamp(),
         }).timeout(const Duration(seconds: 10));
-        
+
         print('Actualizado correctamente');
       }
     } catch (e) {
@@ -177,7 +177,7 @@ class AuthService {
     }
   }
 
-  // Cerrar sesión
+  //Logout
   Future<void> signOut() async {
     try {
       await _auth.signOut().timeout(const Duration(seconds: 10));
@@ -188,7 +188,7 @@ class AuthService {
     }
   }
 
-  // Restablecer contraseña
+  //Resetear Contraseña
   Future<void> resetPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim()).timeout(
@@ -208,20 +208,20 @@ class AuthService {
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
       print('Obteniendo datos para $uid');
-      
+
       DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get()
           .timeout(const Duration(seconds: 10));
-      
+
       if (doc.exists) {
         print('Datos encontrados');
         return doc.data() as Map<String, dynamic>?;
       } else {
         print('Documento no encontrado');
-        
+
         final currentUser = _auth.currentUser;
         if (currentUser != null && currentUser.uid == uid) {
           print('Creando documento faltante...');
-          
+
           final userData = {
             'uid': uid,
             'username': currentUser.displayName ?? 'Usuario',
@@ -230,13 +230,13 @@ class AuthService {
             'lastLogin': FieldValue.serverTimestamp(),
             'recoveredAccount': true,
           };
-          
+
           await _firestore.collection('users').doc(uid).set(userData);
           print('Documento creado');
-          
+
           return userData;
         }
-        
+
         return null;
       }
     } catch (e) {
@@ -245,7 +245,7 @@ class AuthService {
     }
   }
 
-  // Método para reparar cuentas existentes 
+
   Future<void> repairUserDocument() async {
     final user = currentUser;
     if (user != null) {
